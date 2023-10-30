@@ -148,6 +148,8 @@ if is_bnb_4bit_available():
                 output = dropout(x) @ (lora_A * lora_E).T @ lora_B.T
                 if requires_conversion:
                     output = output.to(expected_dtype)
+                now_type = output.dtype
                 output = output * scaling / ranknum
+                output = output.to(now_type)
                 result += output
             return result

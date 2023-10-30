@@ -91,6 +91,29 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default", un
         to_return["prompt_embeddings"] = prompt_embeddings
     elif config.peft_type == PeftType.IA3:
         to_return = {k: state_dict[k] for k in state_dict if "ia3_" in k}
+    elif config.peft_type == PeftType.LLORA:
+        bias = config.bias
+        if bias == "none":
+            to_return = {k: state_dict[k] for k in state_dict if "lora_" in k}
+        elif bias == "all":
+            to_return = {k: state_dict[k] for k in state_dict if "lora_" in k or "bias" in k}
+        elif bias == "lora_only":
+            to_return = {}
+            for k in state_dict:
+                if "lora_" in k:
+                    to_return[k] = state_dict[k]
+                    bias_name = k.split("lora_")[0] + "bias"
+                    if bias_name in state_dict:
+                        to_return[bias_name] = state_dict[bias_name]
+        else:
+            raise NotImplementedError
+        to_return = {k: v for k, v in to_return.items() if (("lora_" in k and adapter_name in k) or ("bias" in k))}
+        if config.peft_type == PeftType.ADALORA:
+            rank_pattern = config.rank_pattern
+            if rank_pattern is not None:
+                rank_pattern = {k.replace(f".{adapter_name}", ""): v for k, v in rank_pattern.items()}
+                config.rank_pattern = rank_pattern
+                to_return = model.resize_state_dict_by_rank_pattern(rank_pattern, to_return, adapter_name)
     else:
         raise NotImplementedError
     if getattr(model, "modules_to_save", None) is not None:

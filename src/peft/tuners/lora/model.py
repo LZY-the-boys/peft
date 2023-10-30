@@ -481,8 +481,8 @@ class LoraModel(BaseTuner):
                 documentation. Defaults to None.
         """
 
-        if adapter_name in list(self.peft_config.keys()):
-            return
+        # if adapter_name in list(self.peft_config.keys()):
+        #     return
         for adapter in adapters:
             if adapter not in list(self.peft_config.keys()):
                 raise ValueError(f"Adapter {adapter} does not exist")
@@ -521,6 +521,9 @@ class LoraModel(BaseTuner):
             new_target_modules = reduce(
                 operator.or_, (self.peft_config[adapter].target_modules for adapter in adapters)
             )
+        elif target_module_types[0] == list:
+            # TODO:
+            new_target_modules = self.peft_config[adapters[0]].target_modules
         else:
             raise TypeError(f"Invalid type {target_module_types[0]} found in target_modules")
 
@@ -536,7 +539,7 @@ class LoraModel(BaseTuner):
         _freeze_adapter(self.model, adapter_name)
 
         key_list = [key for key, _ in self.model.named_modules() if "lora" not in key]
-        for key in key_list:
+        for key in tqdm(key_list,desc='merging lora'):
             _, target, _ = _get_submodules(self.model, key)
             if isinstance(target, LoraLayer):
                 if adapter_name in target.lora_A:
@@ -632,6 +635,7 @@ class LoraModel(BaseTuner):
             delta_weight = delta_weight.T
 
         # based on https://github.com/kohya-ss/sd-scripts/blob/main/networks/svd_merge_lora.py#L114-L131
+        # use gpu to calculate
         U, S, Vh = torch.linalg.svd(delta_weight, full_matrices=full_matrices, driver=driver)
         U = U[:, :new_rank]
         S = S[:new_rank]
