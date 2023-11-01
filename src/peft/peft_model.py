@@ -62,7 +62,7 @@ from .utils import (
     set_peft_model_state_dict,
     shift_tokens_right,
 )
-
+from .tuners.custom.llora import LLoraModel
 
 PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.LORA: LoraModel,
@@ -73,6 +73,7 @@ PEFT_TYPE_TO_MODEL_MAPPING = {
     PeftType.ADALORA: AdaLoraModel,
     PeftType.ADAPTION_PROMPT: AdaptionPromptModel,
     PeftType.IA3: IA3Model,
+    "LLORA": LLoraModel,
 }
 
 

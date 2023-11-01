@@ -45,7 +45,8 @@ from .tuners import (
     PromptTuningConfig,
 )
 from .utils import _prepare_prompt_learning_config
-
+# custom
+from .tuners.custom.llora import LLoraModel, LLoraConfig
 
 if TYPE_CHECKING:
     from transformers import PreTrainedModel
@@ -66,6 +67,7 @@ PEFT_TYPE_TO_CONFIG_MAPPING: Dict[str, PeftConfig] = {
     "PREFIX_TUNING": PrefixTuningConfig,
     "P_TUNING": PromptEncoderConfig,
     "LORA": LoraConfig,
+    "LLORA": LLoraConfig,
     "LOHA": LoHaConfig,
     "ADALORA": AdaLoraConfig,
     "IA3": IA3Config,
@@ -74,6 +76,7 @@ PEFT_TYPE_TO_CONFIG_MAPPING: Dict[str, PeftConfig] = {
 
 PEFT_TYPE_TO_TUNER_MAPPING = {
     "LORA": LoraModel,
+    "LLORA": LLoraModel,
     "LOHA": LoHaModel,
     "ADALORA": AdaLoraModel,
     "IA3": IA3Model,
