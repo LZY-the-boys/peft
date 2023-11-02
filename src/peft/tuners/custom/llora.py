@@ -166,9 +166,9 @@ class LLoraLayer(LoraLayer):
         nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_small"].weight, a=math.sqrt(5))
         nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_large"].weight, a=math.sqrt(5))
         nn.init.kaiming_uniform_(self.lora_B[adapter_name+"_s2l"].weight, a=math.sqrt(5))
-        nn.init.zeros_(self.lora_B[adapter_name+"_small"].weight)
-        nn.init.zeros_(self.lora_A[adapter_name+"_s2l"].weight)
-        nn.init.zeros_(self.lora_B[adapter_name+"_large"].weight)
+        nn.init.kaiming_uniform_(self.lora_B[adapter_name + "_small"].weight,a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.lora_A[adapter_name + "_s2l"].weight,a=math.sqrt(5))
+        nn.init.zeros_(self.lora_B[adapter_name + "_large"].weight)
 
 class Linear(nn.Linear, LLoraLayer):
     # Lora implemented in a dense layer
