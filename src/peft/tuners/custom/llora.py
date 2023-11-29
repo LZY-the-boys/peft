@@ -19,6 +19,9 @@ from peft.import_utils import is_bnb_4bit_available, is_bnb_available
 if is_bnb_available():
     import bitsandbytes as bnb
 
+
+exp=os.getenv('exp', '')
+
 @dataclass
 class LLoraConfig(LoraConfig):
     
@@ -73,9 +76,9 @@ class LLoraLayer(LoraLayer):
                 self.to(weight.device, dtype=weight.dtype)
             else:
                 self.to(weight.device)
-        else:
-            # for 4bit 8bit
-            self.to(self.base_layer.weight.device)
+        # else:
+        #     # for 4bit 8bit
+        #     self.to(self.base_layer.weight.device)
         
         self.set_adapter(self.active_adapters)
 
@@ -96,7 +99,12 @@ class LLoraLayer(LoraLayer):
                 if key.split('_')[0] in adapter_names:
                     # Note: It is possible that not a single layer is called with requires_grad_(True) here. This may
                     # happen if a completely different adapter layer is being activated.
-                    layer.requires_grad_(True)
+                    if '-freeze-s2l' in exp and 's2l' in key:
+                        layer.requires_grad_(False)
+                    elif '-freeze-small' in exp and 'small' in key:
+                        layer.requires_grad_(False)
+                    else:
+                        layer.requires_grad_(True)
                 else:
                     layer.requires_grad_(False)
 
@@ -125,7 +133,20 @@ class LLoraLayer(LoraLayer):
             )
             self.scaling[adapter_name] = lora_alpha / r
         if init_lora_weights:
-            self.reset_lora_parameters(adapter_name)
+            if 'p0' in exp:
+                self.reset_lora_parameters0(adapter_name)
+            elif 'p1' in exp:
+                self.reset_lora_parameters1(adapter_name)
+            elif 'p2' in exp:
+                self.reset_lora_parameters2(adapter_name)
+            elif 'p3' in exp:
+                self.reset_lora_parameters3(adapter_name)
+            elif 'p4' in exp:
+                self.reset_lora_parameters4(adapter_name)
+            elif 'p5' in exp:
+                self.reset_lora_parameters5(adapter_name)
+            else:
+                raise Exception('error')
         self.to(self.weight.device)
     #unuse
     def update_layer_embedding(self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights):
@@ -148,27 +169,53 @@ class LLoraLayer(LoraLayer):
             self.reset_lora_parameters(adapter_name)
         self.to(self.weight.device)
 
-    def reset_lora_parameters(self, adapter_name):
-        suffix = ["_small", "_large", "_s2l"]
-        # for suffix_name in suffix:
-            # full_name = adapter_name + suffix_name
-            # if full_name in self.lora_A.keys():
-            #     # initialize A the same way as the default for nn.Linear and B to zero
-            #     nn.init.kaiming_uniform_(self.lora_A[full_name].weight, a=math.sqrt(5))
-            #     # nn.init.zeros_(self.lora_B[full_name].weight)
-            #     # nn.init.kaiming_uniform_(self.lora_B[full_name].weight, a=math.sqrt(0.1))
-            #     # nn.init.kaiming_uniform_(self.lora_B[full_name].weight, a=math.sqrt(float(os.getenv('KaimingA', 10))))
-            #     nn.init.normal_(self.lora_B[full_name].weight)
-            # if full_name in self.lora_embedding_A.keys():
-            #     # initialize a the same way as the default for nn.linear and b to zero
-            #     nn.init.zeros_(self.lora_embedding_A[full_name])
-            #     nn.init.normal_(self.lora_embedding_B[full_name])
+    def reset_lora_parameters0(self, adapter_name):
         nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_small"].weight, a=math.sqrt(5))
         nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_large"].weight, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.lora_B[adapter_name+"_large"].weight, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_s2l"].weight, a=math.sqrt(5))
         nn.init.kaiming_uniform_(self.lora_B[adapter_name+"_s2l"].weight, a=math.sqrt(5))
         nn.init.zeros_(self.lora_B[adapter_name+"_small"].weight)
-        nn.init.zeros_(self.lora_A[adapter_name+"_s2l"].weight)
-        nn.init.zeros_(self.lora_B[adapter_name+"_large"].weight)
+
+    def reset_lora_parameters1(self, adapter_name):
+        nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_small"].weight, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_large"].weight, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.lora_B[adapter_name+"_large"].weight, a=math.sqrt(5))
+        nn.init.orthogonal_(self.lora_A[adapter_name+"_s2l"].weight)
+        nn.init.orthogonal_(self.lora_B[adapter_name+"_s2l"].weight)
+        nn.init.zeros_(self.lora_B[adapter_name+"_small"].weight)
+
+    # def reset_lora_parameters2(self, adapter_name):
+    #     nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_small"].weight, a=math.sqrt(5))
+    #     nn.init.kaiming_uniform_(self.lora_B[adapter_name+"_small"].weight, a=math.sqrt(5))
+    #     nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_large"].weight, a=math.sqrt(5))
+    #     nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_s2l"].weight, a=math.sqrt(5))
+    #     nn.init.kaiming_uniform_(self.lora_B[adapter_name+"_s2l"].weight, a=math.sqrt(5))
+    #     nn.init.zeros_(self.lora_B[adapter_name+"_large"].weight)
+
+    # def reset_lora_parameters3(self, adapter_name):
+    #     nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_small"].weight, a=math.sqrt(5))
+    #     nn.init.kaiming_uniform_(self.lora_B[adapter_name+"_small"].weight, a=math.sqrt(5))
+    #     nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_large"].weight, a=math.sqrt(5))
+    #     nn.init.orthogonal_(self.lora_A[adapter_name+"_s2l"].weight)
+    #     nn.init.orthogonal_(self.lora_B[adapter_name+"_s2l"].weight)
+    #     nn.init.zeros_(self.lora_B[adapter_name+"_large"].weight)
+
+    # def reset_lora_parameters4(self, adapter_name):
+    #     nn.init.orthogonal_(self.lora_A[adapter_name+"_small"].weight, a=math.sqrt(5))
+    #     nn.init.orthogonal_(self.lora_B[adapter_name+"_small"].weight, a=math.sqrt(5))
+    #     nn.init.orthogonal_(self.lora_A[adapter_name+"_s2l"].weight)
+    #     nn.init.orthogonal_(self.lora_B[adapter_name+"_s2l"].weight)
+    #     nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_large"].weight, a=math.sqrt(5))
+    #     nn.init.zeros_(self.lora_B[adapter_name+"_large"].weight)
+
+    # def reset_lora_parameters5(self, adapter_name):
+    #     nn.init.orthogonal_(self.lora_A[adapter_name+"_large"].weight, a=math.sqrt(5))
+    #     nn.init.orthogonal_(self.lora_B[adapter_name+"_large"].weight, a=math.sqrt(5))
+    #     nn.init.orthogonal_(self.lora_A[adapter_name+"_s2l"].weight)
+    #     nn.init.orthogonal_(self.lora_B[adapter_name+"_s2l"].weight)
+    #     nn.init.kaiming_uniform_(self.lora_A[adapter_name+"_small"].weight, a=math.sqrt(5))
+    #     nn.init.zeros_(self.lora_B[adapter_name+"_small"].weight)
 
 class Linear(nn.Linear, LLoraLayer):
     # Lora implemented in a dense layer
@@ -188,16 +235,16 @@ class Linear(nn.Linear, LLoraLayer):
         **kwargs,
     ):
         init_lora_weights = kwargs.pop("init_lora_weights", True)
-        nn.Linear.__init__(self, small_in_features, small_out_features, **kwargs)
-        LLoraLayer.__init__(self, large_in_features=large_in_features, large_out_features=large_out_features, 
-                           small_in_features=small_in_features, small_out_features=small_out_features)
+        super(nn.Linear, self).__init__()
+        LLoraLayer.__init__(
+            self, 
+            large_in_features=large_in_features, large_out_features=large_out_features, 
+            small_in_features=small_in_features, small_out_features=small_out_features
+        )
         # Freezing the pre-trained weight matrix
 
         self.fan_in_fan_out = fan_in_fan_out
-        if fan_in_fan_out:
-            self.weight.data = self.weight.data.T
 
-        nn.Linear.reset_parameters(self)
         self.update_layer(adapter_name, small_r, large_r, lora_alpha, lora_dropout, init_lora_weights)
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
         self.set_adapter(adapter_name)
@@ -233,35 +280,44 @@ class Linear(nn.Linear, LLoraLayer):
             * self.scaling[adapter + "_large"] #TODO just one?
         )
 
+    def _linear(self, input: torch.Tensor) -> torch.Tensor:
+        return F.linear(input, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+
     def forward(self, x: torch.Tensor):
         previous_dtype = x.dtype
-        if self.active_adapter + "_small" not in self.lora_A.keys() and self.active_adapter + "_large" not in self.lora_A.keys():
-            return F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+
         if self.disable_adapters:
-            if self.r[self.active_adapter + "_small"] > 0 and self.r[self.active_adapter + "_large"] > 0 and self.merged:
+            if self.merged:
                 self.unmerge()
-            result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
-        elif self.r[self.active_adapter + "_small"] > 0 and self.r[self.active_adapter + "_large"] > 0 and not self.merged:
-            result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
-
-            x = x.to(self.lora_A[self.active_adapter + "_small"].weight.dtype)
-
-            result += (
-                self.lora_B[self.active_adapter + "_small"](
-                self.lora_B[self.active_adapter + "_s2l"](
-                self.lora_B[self.active_adapter + "_large"](
-                    self.lora_A[self.active_adapter + "_large"](
-                    self.lora_A[self.active_adapter + "_s2l"](
-                    self.lora_A[self.active_adapter + "_small"](self.lora_dropout[self.active_adapter](x))
-                    ))
-                )))
-                * self.scaling[self.active_adapter + "_large"] #TODO
-            )
+            result = self._linear(x)
+        elif self.merged:
+            result = self._linear(x)
         else:
-            result = F.linear(x, transpose(self.weight, self.fan_in_fan_out), bias=self.bias)
+            result = self._linear(x)
+            for active_adapter in self.active_adapters:
+                if f'{active_adapter}_small' not in self.lora_A.keys():
+                    continue
+                
+                x = x.to(self.lora_A[active_adapter + "_small"].weight.dtype)
+
+                output = (
+                    self.lora_B[active_adapter + "_small"](
+                        self.lora_B[active_adapter + "_s2l"](
+                            self.lora_B[active_adapter + "_large"](
+                                self.lora_A[active_adapter + "_large"](
+                                    self.lora_A[active_adapter + "_s2l"](
+                                        self.lora_A[active_adapter + "_small"](
+                                            self.lora_dropout[active_adapter](x)
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )  
+                )
+                result += output * self.scaling[active_adapter + "_large"]
 
         result = result.to(previous_dtype)
-
         return result
 
 import logging
